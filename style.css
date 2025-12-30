@@ -1,0 +1,570 @@
+/* ============================================
+   CALM COUNTDOWN - style.css
+   Calm.com-inspired design system
+   ============================================ */
+
+:root {
+    /* Calm Color Palette */
+    --calm-dark: #0a1628;
+    --calm-deep: #12253d;
+    --calm-blue: #1a3a52;
+    --calm-teal: #2d5a6b;
+    --calm-light: #4a7a8a;
+    --calm-glow: rgba(100, 180, 200, 0.3);
+    
+    /* Text Colors */
+    --text-primary: rgba(255, 255, 255, 0.95);
+    --text-secondary: rgba(255, 255, 255, 0.75);
+    --text-muted: rgba(255, 255, 255, 0.55);
+    
+    /* UI Elements */
+    --card-bg: rgba(0, 0, 0, 0.25);
+    --card-bg-hover: rgba(0, 0, 0, 0.35);
+    --card-border: rgba(255, 255, 255, 0.1);
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    
+    /* Layout */
+    --border-radius: 20px;
+    --border-radius-sm: 12px;
+    
+    /* Progress Colors */
+    --progress-start: #4a9ead;
+    --progress-end: #7bc5b8;
+    --progress-glow: rgba(100, 180, 170, 0.5);
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+/* ============================================
+   ANIMATED GRADIENT BACKGROUNDS
+   ============================================ */
+
+body {
+    background: linear-gradient(180deg, var(--calm-dark) 0%, var(--calm-deep) 50%, var(--calm-blue) 100%);
+    position: relative;
+}
+
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: 
+        radial-gradient(ellipse at 20% 80%, rgba(100, 150, 180, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(80, 120, 160, 0.1) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 50%, rgba(60, 100, 140, 0.08) 0%, transparent 70%);
+    pointer-events: none;
+    animation: ambientGlow 20s ease-in-out infinite alternate;
+    z-index: 0;
+}
+
+@keyframes ambientGlow {
+    0% {
+        opacity: 0.6;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+}
+
+/* ============================================
+   CANVAS & 3D SCENE
+   ============================================ */
+
+#renderCanvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    touch-action: none;
+    z-index: 1;
+}
+
+/* ============================================
+   UI LAYER
+   ============================================ */
+
+.ui-layer {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2rem;
+    padding-top: max(2rem, env(safe-area-inset-top));
+    padding-bottom: max(2rem, env(safe-area-inset-bottom));
+}
+
+/* ============================================
+   TOP SECTION - Progress Ring
+   ============================================ */
+
+.top-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    opacity: 0;
+    animation: fadeInDown 1.5s ease-out 0.5s forwards;
+}
+
+.progress-ring-container {
+    position: relative;
+    width: clamp(140px, 25vw, 180px);
+    height: clamp(140px, 25vw, 180px);
+    pointer-events: auto;
+}
+
+.progress-ring {
+    transform: rotate(-90deg);
+    width: 100%;
+    height: 100%;
+}
+
+.progress-ring-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.1);
+    stroke-width: 4;
+}
+
+.progress-ring-progress {
+    fill: none;
+    stroke: url(#progressGradient);
+    stroke-width: 4;
+    stroke-linecap: round;
+    stroke-dasharray: 440;
+    stroke-dashoffset: 440;
+    transition: stroke-dashoffset 1.5s ease-out;
+    filter: drop-shadow(0 0 8px var(--progress-glow));
+}
+
+.progress-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.progress-percent {
+    font-size: clamp(1.8rem, 5vw, 2.5rem);
+    font-weight: 300;
+    color: var(--text-primary);
+    line-height: 1;
+    letter-spacing: -0.02em;
+}
+
+.progress-label {
+    font-size: clamp(0.65rem, 1.5vw, 0.75rem);
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-top: 0.25rem;
+}
+
+.day-indicator {
+    font-size: clamp(0.9rem, 2vw, 1rem);
+    color: var(--text-secondary);
+    font-weight: 400;
+    letter-spacing: 0.05em;
+}
+
+/* ============================================
+   CENTER SECTION - Spacer for 3D Tree
+   ============================================ */
+
+.center-section {
+    flex: 1;
+}
+
+/* ============================================
+   BOTTOM SECTION - Countdown & Quote
+   ============================================ */
+
+.bottom-section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    max-width: 600px;
+    width: 100%;
+    opacity: 0;
+    animation: fadeInUp 1.5s ease-out 0.8s forwards;
+}
+
+.countdown-container {
+    display: flex;
+    gap: clamp(0.6rem, 2vw, 1rem);
+    flex-wrap: wrap;
+    justify-content: center;
+    pointer-events: auto;
+}
+
+.time-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: var(--border-radius);
+    padding: clamp(1rem, 2.5vw, 1.5rem) clamp(1.2rem, 3vw, 2rem);
+    border: 1px solid var(--card-border);
+    min-width: clamp(72px, 18vw, 95px);
+    text-align: center;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+}
+
+.time-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+}
+
+.time-card:hover {
+    background: var(--card-bg-hover);
+    transform: translateY(-4px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.time-value {
+    font-size: clamp(1.8rem, 5vw, 2.5rem);
+    font-weight: 300;
+    color: var(--text-primary);
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+}
+
+.time-label {
+    font-size: clamp(0.6rem, 1.3vw, 0.7rem);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    margin-top: 0.5rem;
+    font-weight: 500;
+}
+
+/* Quote Container */
+.quote-container {
+    text-align: center;
+    padding: 0 1.5rem;
+    max-width: 500px;
+    opacity: 0;
+    animation: fadeIn 2s ease-out 1.5s forwards;
+}
+
+.quote-text {
+    font-size: clamp(0.9rem, 2.2vw, 1.05rem);
+    color: var(--text-secondary);
+    font-style: italic;
+    line-height: 1.8;
+    font-weight: 300;
+    text-shadow: 0 2px 15px rgba(0, 0, 0, 0.5);
+}
+
+/* Motivational Badge */
+.motivation-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.2rem;
+    background: linear-gradient(135deg, rgba(100, 180, 170, 0.2), rgba(80, 150, 140, 0.1));
+    border: 1px solid rgba(100, 180, 170, 0.3);
+    border-radius: 50px;
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    pointer-events: auto;
+    transition: all 0.3s ease;
+}
+
+.motivation-badge:hover {
+    background: linear-gradient(135deg, rgba(100, 180, 170, 0.3), rgba(80, 150, 140, 0.2));
+    transform: scale(1.02);
+}
+
+.motivation-badge-icon {
+    font-size: 1rem;
+}
+
+/* ============================================
+   SOUND CONTROLS
+   ============================================ */
+
+.sound-toggle {
+    position: fixed;
+    top: max(1.5rem, env(safe-area-inset-top));
+    right: 1.5rem;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--card-border);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.2rem;
+    color: var(--text-secondary);
+    transition: all 0.3s ease;
+    z-index: 100;
+    pointer-events: auto;
+}
+
+.sound-toggle:hover {
+    background: var(--card-bg-hover);
+    transform: scale(1.08);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.sound-toggle:active {
+    transform: scale(0.95);
+}
+
+.music-indicator {
+    position: fixed;
+    top: max(1.5rem, env(safe-area-inset-top));
+    right: 5rem;
+    padding: 0.6rem 1.2rem;
+    border-radius: 24px;
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--card-border);
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    z-index: 100;
+    opacity: 0;
+    transform: translateX(10px);
+    transition: all 0.5s ease;
+    pointer-events: none;
+}
+
+.music-indicator.visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+/* ============================================
+   SCENE SELECTOR
+   ============================================ */
+
+.scene-indicator {
+    position: fixed;
+    bottom: max(1.5rem, env(safe-area-inset-bottom));
+    left: 1.5rem;
+    padding: 0.6rem 1rem;
+    border-radius: 20px;
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--card-border);
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    z-index: 100;
+    pointer-events: auto;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.scene-indicator:hover {
+    background: var(--card-bg-hover);
+}
+
+/* ============================================
+   COMPLETE MESSAGE
+   ============================================ */
+
+.complete-message {
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.5rem;
+    text-align: center;
+}
+
+.complete-message.visible {
+    display: flex;
+    animation: fadeIn 1.5s ease-out;
+}
+
+.complete-emoji {
+    font-size: 3rem;
+    animation: float 3s ease-in-out infinite;
+}
+
+.complete-text {
+    font-size: clamp(1.3rem, 4vw, 1.8rem);
+    font-weight: 300;
+    color: var(--text-primary);
+    line-height: 1.6;
+    text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+}
+
+/* ============================================
+   LOADING SCREEN
+   ============================================ */
+
+.loading-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(180deg, var(--calm-dark) 0%, var(--calm-deep) 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    transition: opacity 1.2s ease-out;
+}
+
+.loading-screen.fade-out {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.loading-spinner {
+    width: 48px;
+    height: 48px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-top-color: var(--calm-light);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 2rem;
+}
+
+.loading-text {
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+    from { 
+        opacity: 0; 
+        transform: translateY(30px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+@keyframes fadeInDown {
+    from { 
+        opacity: 0; 
+        transform: translateY(-30px); 
+    }
+    to { 
+        opacity: 1; 
+        transform: translateY(0); 
+    }
+}
+
+@keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* Hidden utility */
+.hidden {
+    display: none !important;
+}
+
+/* ============================================
+   RESPONSIVE
+   ============================================ */
+
+@media (max-width: 480px) {
+    .ui-layer {
+        padding: 1.25rem;
+    }
+    
+    .bottom-section {
+        gap: 1.25rem;
+    }
+    
+    .progress-ring-container {
+        width: 120px;
+        height: 120px;
+    }
+}
+
+@media (min-height: 800px) {
+    .bottom-section {
+        gap: 2rem;
+    }
+}
+
+/* Landscape phones */
+@media (max-height: 500px) and (orientation: landscape) {
+    .ui-layer {
+        flex-direction: row;
+        justify-content: space-around;
+        padding: 1rem 2rem;
+    }
+    
+    .top-section, .bottom-section {
+        flex: 0 0 auto;
+    }
+    
+    .center-section {
+        display: none;
+    }
+    
+    .progress-ring-container {
+        width: 100px;
+        height: 100px;
+    }
+}
