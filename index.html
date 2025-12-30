@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Growth Journey</title>
+    <style>
+        :root {
+            --text-primary: rgba(255, 255, 255, 0.95);
+            --text-secondary: rgba(255, 255, 255, 0.75);
+            --text-muted: rgba(255, 255, 255, 0.55);
+            --card-bg: rgba(0, 0, 0, 0.25);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --border-radius: 16px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(180deg, #1a2f1a 0%, #0d1f0d 100%);
+        }
+
+        #renderCanvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+            z-index: 1;
+        }
+
+        .ui-layer {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 2rem;
+            padding-bottom: max(2rem, env(safe-area-inset-bottom));
+        }
+
+        .content-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .countdown-container {
+            display: flex;
+            gap: clamp(0.5rem, 2vw, 1rem);
+            flex-wrap: wrap;
+            justify-content: center;
+            pointer-events: auto;
+        }
+
+        .time-card {
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: var(--border-radius);
+            padding: clamp(0.9rem, 2.5vw, 1.25rem) clamp(1.1rem, 3vw, 1.75rem);
+            border: 1px solid var(--card-border);
+            min-width: clamp(68px, 17vw, 88px);
+            text-align: center;
+            transition: transform 0.3s ease, background 0.3s ease;
+        }
+
+        .time-card:hover {
+            background: rgba(0, 0, 0, 0.35);
+            transform: translateY(-2px);
+        }
+
+        .time-value {
+            font-size: clamp(1.6rem, 5vw, 2.25rem);
+            font-weight: 300;
+            color: var(--text-primary);
+            line-height: 1;
+            font-variant-numeric: tabular-nums;
+            letter-spacing: -0.02em;
+        }
+
+        .time-label {
+            font-size: clamp(0.55rem, 1.3vw, 0.7rem);
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-top: 0.4rem;
+            font-weight: 500;
+        }
+
+        .quote-container {
+            text-align: center;
+            padding: 0 1rem;
+            opacity: 0;
+            animation: fadeIn 2s ease-out 1s forwards;
+        }
+
+        .quote-text {
+            font-size: clamp(0.85rem, 2.2vw, 1rem);
+            color: var(--text-secondary);
+            font-style: italic;
+            line-height: 1.7;
+            font-weight: 300;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            max-width: 300px;
+            height: 3px;
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, rgba(129, 199, 132, 0.8), rgba(102, 187, 106, 0.9));
+            border-radius: 2px;
+            transition: width 1s ease-out;
+            box-shadow: 0 0 10px rgba(129, 199, 132, 0.5);
+        }
+
+        .progress-text {
+            font-size: clamp(0.7rem, 1.6vw, 0.8rem);
+            color: var(--text-muted);
+            letter-spacing: 0.05em;
+        }
+
+        .sound-toggle {
+            position: fixed;
+            top: max(1.25rem, env(safe-area-inset-top));
+            right: 1.25rem;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: var(--card-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid var(--card-border);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            color: var(--text-secondary);
+            transition: all 0.3s ease;
+            z-index: 100;
+            pointer-events: auto;
+        }
+
+        .sound-toggle:hover {
+            background: rgba(0, 0, 0, 0.4);
+            transform: scale(1.05);
+        }
+
+        .sound-toggle:active {
+            transform: scale(0.95);
+        }
+
+        .complete-message {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+            text-align: center;
+        }
+
+        .complete-message.visible {
+            display: flex;
+            animation: fadeIn 1.5s ease-out;
+        }
+
+        .complete-text {
+            font-size: clamp(1.2rem, 3.5vw, 1.6rem);
+            font-weight: 300;
+            color: var(--text-primary);
+            line-height: 1.6;
+            text-shadow: 0 2px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .complete-emoji {
+            font-size: 2rem;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .loading-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, #1a2f1a 0%, #0d1f0d 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 1s ease-out;
+        }
+
+        .loading-screen.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loading-text {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-top-color: rgba(129, 199, 132, 0.8);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 1.5rem;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        @media (max-width: 480px) {
+            .ui-layer {
+                padding: 1.5rem;
+                padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+            }
+            
+            .content-wrapper {
+                gap: 1.25rem;
+            }
+        }
+
+        @media (min-height: 700px) {
+            .ui-layer {
+                padding-bottom: max(3rem, env(safe-area-inset-bottom));
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-screen" id="loadingScreen">
+        <div class="loading-spinner"></div>
+        <p class="loading-text">Preparing your journey</p>
+    </div>
+
+    <canvas id="renderCanvas"></canvas>
+
+    <div class="ui-layer">
+        <div class="content-wrapper">
+            <section class="countdown-container" id="countdown">
+                <article class="time-card">
+                    <div class="time-value" id="days">--</div>
+                    <div class="time-label">Days</div>
+                </article>
+                <article class="time-card">
+                    <div class="time-value" id="hours">--</div>
+                    <div class="time-label">Hours</div>
+                </article>
+                <article class="time-card">
+                    <div class="time-value" id="minutes">--</div>
+                    <div class="time-label">Minutes</div>
+                </article>
+                <article class="time-card">
+                    <div class="time-value" id="seconds">--</div>
+                    <div class="time-label">Seconds</div>
+                </article>
+            </section>
+
+            <div class="progress-bar-container">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+            <p class="progress-text" id="progressText">0% complete</p>
+
+            <section class="quote-container">
+                <p class="quote-text" id="quoteText"></p>
+            </section>
+
+            <section class="complete-message" id="complete">
+                <span class="complete-emoji">🌱</span>
+                <p class="complete-text">It's time.<br>Walk forward calmly.</p>
+            </section>
+        </div>
+    </div>
+
+    <button class="sound-toggle" id="soundToggle" aria-label="Toggle ambient sound">🔇</button>
+
+    <script>
+        (function() {
+            const targetDate = new Date(Date.UTC(2026, 1, 13, 12, 30, 0));
+            const startDate = new Date(Date.UTC(2024, 11, 1, 0, 0, 0));
+
+            const quotes = [
+                "The only way to make sense out of change is to plunge into it, move with it, and join the dance.",
+                "Growth is painful. Change is painful. But nothing is as painful as staying stuck somewhere you don't belong.",
+                "What lies behind us and what lies before us are tiny matters compared to what lies within us.",
+                "The secret of change is to focus all of your energy not on fighting the old, but on building the new.",
+                "You don't have to see the whole staircase, just take the first step.",
+                "Within you there is a stillness and a sanctuary to which you can retreat at any time.",
+                "The wound is the place where the light enters you.",
+                "Be patient with yourself. You are growing stronger every day.",
+                "Let go of who you think you're supposed to be; embrace who you are.",
+                "Your calm mind is the ultimate weapon against your challenges.",
+                "The best time to plant a tree was twenty years ago. The second best time is now.",
+                "Peace comes from within. Do not seek it without.",
+                "The quieter you become, the more you can hear.",
+                "New beginnings are often disguised as painful endings.",
+                "Trust the wait. Embrace the uncertainty. Enjoy the beauty of becoming.",
+                "Courage is not the absence of fear, but rather the judgment that something else is more important.",
+                "In the middle of difficulty lies opportunity.",
+                "When I let go of what I am, I become what I might be.",
+                "Life begins at the end of your comfort zone.",
+                "Surrender to what is. Let go of what was. Have faith in what will be.",
+                "Not all those who wander are lost.",
+                "A tree that is unbending is easily broken. Bend and flow.",
+                "The present moment is the only moment available to us, and it is the door to all moments.",
+                "You are never too old to set another goal or to dream a new dream.",
+                "Where there is no struggle, there is no strength.",
+                "Freedom is not worth having if it does not include the freedom to make mistakes.",
+                "Every moment is a fresh beginning.",
+                "The only journey is the one within.",
+                "You are allowed to be both a masterpiece and a work in progress simultaneously.",
+                "Sometimes the smallest step in the right direction ends up being the biggest step of your life."
+            ];
+
+            const daysEl = document.getElementById('days');
+            const hoursEl = document.getElementById('hours');
+            const minutesEl = document.getElementById('minutes');
+            const secondsEl = document.getElementById('seconds');
+            const countdownEl = document.getElementById('countdown');
+            const completeEl = document.getElementById('complete');
+            const quoteText = document.getElementById('quoteText');
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const soundToggle = document.getElementById('soundToggle');
+            const loadingScreen = document.getElementById('loadingScreen');
+
+            quoteText.textContent = `"${quotes[Math.floor(Math.random() * quotes.length)]}"`;
+
+            let audioContext = null;
+            let isPlaying = false;
+            let masterGain = null;
+
+            function initAudio() {
+                if (audioContext) return;
+                
+                try {
+                    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    masterGain = audioContext.createGain();
+                    masterGain.gain.value = 0;
+                    masterGain.connect(audioContext.destination);
+
+                    createDrone(65.41, 0.06);
+                    createDrone(98.00, 0.04);
+                    createDrone(130.81, 0.03);
+                    createDrone(196.00, 0.02);
+                    createWind();
+                    createBirds();
+                } catch (e) {
+                    console.log('Audio not available');
+                }
+            }
+
+            function createDrone(freq, vol) {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                const filter = audioContext.createBiquadFilter();
+                
+                osc.type = 'sine';
+                osc.frequency.value = freq;
+                
+                filter.type = 'lowpass';
+                filter.frequency.value = 400;
+                filter.Q.value = 1;
+                
+                gain.gain.value = vol;
+                
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(masterGain);
+                
+                osc.start();
+            }
+
+            function createWind() {
+                const bufferSize = 2 * audioContext.sampleRate;
+                const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+                const output = noiseBuffer.getChannelData(0);
+                
+                for (let i = 0; i < bufferSize; i++) {
+                    output[i] = Math.random() * 2 - 1;
+                }
+                
+                const whiteNoise = audioContext.createBufferSource();
+                whiteNoise.buffer = noiseBuffer;
+                whiteNoise.loop = true;
+                
+                const windFilter = audioContext.createBiquadFilter();
+                windFilter.type = 'lowpass';
+                windFilter.frequency.value = 200;
+                
+                const windGain = audioContext.createGain();
+                windGain.gain.value = 0.008;
+                
+                whiteNoise.connect(windFilter);
+                windFilter.connect(windGain);
+                windGain.connect(masterGain);
+                
+                whiteNoise.start();
+            }
+
+            function createBirds() {
+                setInterval(() => {
+                    if (!isPlaying || Math.random() > 0.3) return;
+                    
+                    const birdOsc = audioContext.createOscillator();
+                    const birdGain = audioContext.createGain();
+                    
+                    birdOsc.type = 'sine';
+                    const baseFreq = 800 + Math.random() * 600;
+                    birdOsc.frequency.value = baseFreq;
+                    birdGain.gain.value = 0;
+                    
+                    birdOsc.connect(birdGain);
+                    birdGain.connect(masterGain);
+                    
+                    const now = audioContext.currentTime;
+                    birdGain.gain.setValueAtTime(0, now);
+                    birdGain.gain.linearRampToValueAtTime(0.015, now + 0.05);
+                    birdOsc.frequency.linearRampToValueAtTime(baseFreq * 1.2, now + 0.1);
+                    birdGain.gain.linearRampToValueAtTime(0.01, now + 0.15);
+                    birdOsc.frequency.linearRampToValueAtTime(baseFreq * 0.9, now + 0.25);
+                    birdGain.gain.linearRampToValueAtTime(0, now + 0.4);
+                    
+                    birdOsc.start(now);
+                    birdOsc.stop(now + 0.5);
+                }, 4000);
+            }
+
+            function toggleSound() {
+                if (!audioContext) initAudio();
+                
+                isPlaying = !isPlaying;
+                soundToggle.textContent = isPlaying ? '🔊' : '🔇';
+                
+                if (audioContext && audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+                
+                if (masterGain) {
+                    masterGain.gain.setTargetAtTime(isPlaying ? 1 : 0, audioContext.currentTime, 0.5);
+                }
+            }
+
+            soundToggle.addEventListener('click', toggleSound);
+
+            function padZero(num) {
+                return num.toString().padStart(2, '0');
+            }
+
+            let currentGrowth = 0;
+            let targetGrowth = 0;
+
+            function updateCountdown() {
+                const now = new Date();
+                const totalDuration = targetDate - startDate;
+                const elapsed = now - startDate;
+                const remaining = targetDate - now;
+                
+                const progress = Math.max(0, Math.min(1, elapsed / totalDuration));
+                targetGrowth = progress;
+                
+                progressBar.style.width = `${progress * 100}%`;
+                progressText.textContent = `${Math.round(progress * 100)}% complete`;
+
+                if (remaining <= 0) {
+                    countdownEl.classList.add('hidden');
+                    document.querySelector('.progress-bar-container').classList.add('hidden');
+                    progressText.classList.add('hidden');
+                    document.querySelector('.quote-container').classList.add('hidden');
+                    completeEl.classList.add('visible');
+                    targetGrowth = 1;
+                    return false;
+                }
+
+                const days = Math.floor(remaining / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((remaining % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((remaining % (1000 * 60)) / 1000);
+
+                daysEl.textContent = days;
+                hoursEl.textContent = padZero(hours);
+                minutesEl.textContent = padZero(minutes);
+                secondsEl.textContent = padZero(seconds);
+
+                return true;
+            }
+
+            const canvas = document.getElementById('renderCanvas');
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+            let engine, scene, camera, tree;
+            let branches = [];
+            let leaves = [];
+
+            function loadBabylon() {
+                const script = document.createElement('script');
+                script.src = 'https://cdn.babylonjs.com/babylon.js';
+                script.onload = function() {
+                    initScene();
+                };
+                script.onerror = function() {
+                    console.log('Babylon.js failed to load, using fallback');
+                    initFallback();
+                };
+                document.head.appendChild(script);
+            }
+
+            function initScene() {
+                try {
+                    engine = new BABYLON.Engine(canvas, true, { 
+                        preserveDrawingBuffer: true, 
+                        stencil: true,
+                        antialias: true
+                    });
+
+                    scene = new BABYLON.Scene(engine);
+                    scene.clearColor = new BABYLON.Color4(0.08, 0.12, 0.06, 1);
+                    scene.ambientColor = new BABYLON.Color3(0.2, 0.25, 0.2);
+                    scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
+                    scene.fogDensity = 0.012;
+                    scene.fogColor = new BABYLON.Color3(0.12, 0.18, 0.1);
+
+                    camera = new BABYLON.ArcRotateCamera(
+                        "camera",
+                        Math.PI / 2,
+                        Math.PI / 2.5,
+                        isMobile ? 14 : 11,
+                        new BABYLON.Vector3(0, 2.5, 0),
+                        scene
+                    );
+                    camera.lowerRadiusLimit = 6;
+                    camera.upperRadiusLimit = 25;
+                    camera.lowerBetaLimit = 0.3;
+                    camera.upperBetaLimit = Math.PI / 2.1;
+                    camera.attachControl(canvas, true);
+                    camera.wheelPrecision = 50;
+                    camera.panningSensibility = 0;
+
+                    const sun = new BABYLON.DirectionalLight(
+                        "sun",
+                        new BABYLON.Vector3(-0.5, -1, -0.3),
+                        scene
+                    );
+                    sun.intensity = 1.8;
+                    sun.diffuse = new BABYLON.Color3(1, 0.95, 0.85);
+
+                    const ambient = new BABYLON.HemisphericLight(
+                        "ambient",
+                        new BABYLON.Vector3(0, 1, 0),
+                        scene
+                    );
+                    ambient.intensity = 0.6;
+                    ambient.diffuse = new BABYLON.Color3(0.5, 0.65, 0.5);
+                    ambient.groundColor = new BABYLON.Color3(0.15, 0.2, 0.1);
+
+                    let shadowGenerator = null;
+                    if (!isMobile) {
+                        shadowGenerator = new BABYLON.ShadowGenerator(1024, sun);
+                        shadowGenerator.useBlurExponentialShadowMap = true;
+                        shadowGenerator.blurKernel = 32;
+                        shadowGenerator.setDarkness(0.3);
+                    }
+
+                    createGround(shadowGenerator);
+                    createTree(shadowGenerator);
+                    createParticles();
+
+                    let lastTime = performance.now();
+                    let cameraAngle = Math.PI / 2;
+
+                    engine.runRenderLoop(function() {
+                        const currentTime = performance.now();
+                        const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
+                        lastTime = currentTime;
+
+                        cameraAngle += deltaTime * 0.05;
+                        camera.alpha = Math.PI / 2 + Math.sin(cameraAngle) * 0.25;
+                        camera.beta = Math.PI / 2.5 + Math.sin(cameraAngle * 0.7) * 0.04;
+
+                        animateTree(deltaTime);
+                        scene.render();
+                    });
+
+                    window.addEventListener('resize', function() {
+                        engine.resize();
+                    });
+
+                    setTimeout(() => {
+                        loadingScreen.classList.add('fade-out');
+                        updateCountdown();
+                        setInterval(updateCountdown, 1000);
+                    }, 800);
+
+                } catch (e) {
+                    console.error('Scene init error:', e);
+                    initFallback();
+                }
+            }
+
+            function createGround(shadowGenerator) {
+                const ground = BABYLON.MeshBuilder.CreateGround("ground", {
+                    width: 60,
+                    height: 60,
+                    subdivisions: 32
+                }, scene);
+
+                const groundMat = new BABYLON.StandardMaterial("groundMat", scene);
+                groundMat.diffuseColor = new BABYLON.Color3(0.12, 0.22, 0.08);
+                groundMat.specularColor = new BABYLON.Color3(0.03, 0.05, 0.02);
+                ground.material = groundMat;
+                ground.receiveShadows = true;
+
+                const grassCount = isMobile ? 40 : 80;
+                for (let i = 0; i < grassCount; i++) {
+                    const blade = BABYLON.MeshBuilder.CreatePlane(`grass${i}`, {
+                        width: 0.06 + Math.random() * 0.04,
+                        height: 0.12 + Math.random() * 0.18
+                    }, scene);
+                    
+                    const dist = 2 + Math.random() * 15;
+                    const angle = Math.random() * Math.PI * 2;
+                    blade.position.x = Math.cos(angle) * dist;
+                    blade.position.z = Math.sin(angle) * dist;
+                    blade.position.y = 0.08;
+                    blade.rotation.y = Math.random() * Math.PI * 2;
+                    
+                    const grassMat = new BABYLON.StandardMaterial(`grassMat${i}`, scene);
+                    grassMat.diffuseColor = new BABYLON.Color3(
+                        0.15 + Math.random() * 0.1,
+                        0.35 + Math.random() * 0.2,
+                        0.1 + Math.random() * 0.05
+                    );
+                    grassMat.specularColor = BABYLON.Color3.Black();
+                    grassMat.backFaceCulling = false;
+                    blade.material = grassMat;
+                }
+            }
+
+            function createTree(shadowGenerator) {
+                tree = new BABYLON.TransformNode("tree", scene);
+
+                const trunkMat = new BABYLON.StandardMaterial("trunkMat", scene);
+                trunkMat.diffuseColor = new BABYLON.Color3(0.32, 0.2, 0.1);
+                trunkMat.specularColor = new BABYLON.Color3(0.08, 0.06, 0.04);
+
+                const trunk = BABYLON.MeshBuilder.CreateCylinder("trunk", {
+                    diameterTop: 0.25,
+                    diameterBottom: 0.45,
+                    height: 2,
+                    tessellation: 16
+                }, scene);
+                trunk.material = trunkMat;
+                trunk.parent = tree;
+                trunk.position.y = 1;
+                
+                if (shadowGenerator) {
+                    shadowGenerator.addShadowCaster(trunk);
+                }
+
+                tree.trunk = trunk;
+
+                const branchConfigs = [
+                    { height: 2.0, angle: 0.55, rotation: 0, length: 1.6 },
+                    { height: 2.4, angle: 0.65, rotation: Math.PI * 0.55, length: 1.4 },
+                    { height: 2.7, angle: 0.45, rotation: Math.PI * 1.15, length: 1.5 },
+                    { height: 3.0, angle: 0.6, rotation: Math.PI * 1.65, length: 1.3 },
+                    { height: 3.3, angle: 0.5, rotation: Math.PI * 0.25, length: 1.2 },
+                    { height: 3.5, angle: 0.55, rotation: Math.PI * 0.85, length: 1.1 },
+                    { height: 3.7, angle: 0.4, rotation: Math.PI * 1.45, length: 1.0 },
+                    { height: 3.9, angle: 0.35, rotation: Math.PI * 0.05, length: 0.9 }
+                ];
+
+                branchConfigs.forEach((config, i) => {
+                    const branch = BABYLON.MeshBuilder.CreateCylinder(`branch${i}`, {
+                        diameterTop: 0.04,
+                        diameterBottom: 0.1,
+                        height: config.length,
+                        tessellation: 8
+                    }, scene);
+                    
+                    branch.material = trunkMat;
+                    branch.parent = tree;
+                    
+                    branch.position.y = config.height;
+                    branch.rotation.z = config.angle;
+                    branch.rotation.y = config.rotation;
+                    branch.position.x = Math.sin(config.rotation) * 0.12;
+                    branch.position.z = Math.cos(config.rotation) * 0.12;
+                    
+                    branch.scaling = new BABYLON.Vector3(0, 0, 0);
+                    branch.config = config;
+                    
+                    if (shadowGenerator && i < 4) {
+                        shadowGenerator.addShadowCaster(branch);
+                    }
+                    
+                    branches.push(branch);
+                });
+
+                const leafCount = isMobile ? 50 : 100;
+                
+                for (let i = 0; i < leafCount; i++) {
+                    const theta = Math.random() * Math.PI * 2;
+                    const phi = Math.random() * Math.PI * 0.55;
+                    const radius = 0.6 + Math.random() * 1.8;
+                    
+                    const leaf = BABYLON.MeshBuilder.CreateDisc(`leaf${i}`, {
+                        radius: 0.25 + Math.random() * 0.35,
+                        tessellation: 6
+                    }, scene);
+                    
+                    const leafMat = new BABYLON.StandardMaterial(`leafMat${i}`, scene);
+                    const greenVar = 0.3 + Math.random() * 0.35;
+                    leafMat.diffuseColor = new BABYLON.Color3(0.15 + Math.random() * 0.1, greenVar, 0.1 + Math.random() * 0.1);
+                    leafMat.specularColor = new BABYLON.Color3(0.05, 0.1, 0.03);
+                    leafMat.backFaceCulling = false;
+                    leaf.material = leafMat;
+                    
+                    leaf.parent = tree;
+                    
+                    const basePos = {
+                        x: Math.sin(phi) * Math.cos(theta) * radius,
+                        y: 3.5 + Math.cos(phi) * radius * 0.7,
+                        z: Math.sin(phi) * Math.sin(theta) * radius
+                    };
+                    
+                    leaf.position = new BABYLON.Vector3(basePos.x, basePos.y, basePos.z);
+                    leaf.rotation.y = Math.random() * Math.PI * 2;
+                    leaf.rotation.x = Math.random() * 0.6 - 0.3;
+                    
+                    leaf.scaling = new BABYLON.Vector3(0, 0, 0);
+                    leaf.basePos = basePos;
+                    leaf.phase = Math.random() * Math.PI * 2;
+                    
+                    if (shadowGenerator && i < 15) {
+                        shadowGenerator.addShadowCaster(leaf);
+                    }
+                    
+                    leaves.push(leaf);
+                }
+            }
+
+            function createParticles() {
+                const particleSystem = new BABYLON.ParticleSystem("particles", isMobile ? 25 : 60, scene);
+                
+                const particleTexture = new BABYLON.DynamicTexture("particleTex", 32, scene);
+                const ctx = particleTexture.getContext();
+                const gradient = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+                gradient.addColorStop(0, "rgba(180, 220, 160, 0.9)");
+                gradient.addColorStop(0.5, "rgba(160, 200, 140, 0.4)");
+                gradient.addColorStop(1, "rgba(140, 180, 120, 0)");
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, 32, 32);
+                particleTexture.update();
+                
+                particleSystem.particleTexture = particleTexture;
+                particleSystem.emitter = new BABYLON.Vector3(0, 3.5, 0);
+                
+                particleSystem.minEmitBox = new BABYLON.Vector3(-2.5, -0.5, -2.5);
+                particleSystem.maxEmitBox = new BABYLON.Vector3(2.5, 2, 2.5);
+                
+                particleSystem.color1 = new BABYLON.Color4(0.75, 0.88, 0.65, 0.35);
+                particleSystem.color2 = new BABYLON.Color4(0.65, 0.82, 0.55, 0.25);
+                particleSystem.colorDead = new BABYLON.Color4(0.55, 0.75, 0.45, 0);
+                
+                particleSystem.minSize = 0.04;
+                particleSystem.maxSize = 0.12;
+                particleSystem.minLifeTime = 4;
+                particleSystem.maxLifeTime = 8;
+                particleSystem.emitRate = isMobile ? 4 : 10;
+                
+                particleSystem.gravity = new BABYLON.Vector3(0, -0.015, 0);
+                particleSystem.direction1 = new BABYLON.Vector3(-0.3, 0.3, -0.3);
+                particleSystem.direction2 = new BABYLON.Vector3(0.3, 0.8, 0.3);
+                
+                particleSystem.minEmitPower = 0.05;
+                particleSystem.maxEmitPower = 0.2;
+                
+                particleSystem.start();
+            }
+
+            function animateTree(deltaTime) {
+                if (!tree) return;
+                
+                currentGrowth += (targetGrowth - currentGrowth) * deltaTime * 0.4;
+                const g = currentGrowth;
+
+                const trunk = tree.trunk;
+                const trunkScale = 0.25 + g * 0.75;
+                trunk.scaling.y = trunkScale;
+                trunk.scaling.x = 0.75 + g * 0.25;
+                trunk.scaling.z = 0.75 + g * 0.25;
+                trunk.position.y = trunkScale;
+
+                branches.forEach((branch, i) => {
+                    const branchThreshold = (i / branches.length) * 0.65;
+                    const branchGrowth = Math.max(0, (g - branchThreshold) / (1 - branchThreshold));
+                    const scale = Math.pow(branchGrowth, 0.6);
+                    branch.scaling = new BABYLON.Vector3(scale, scale, scale);
+                    branch.position.y = branch.config.height * trunkScale * 0.9;
+                });
+
+                const time = performance.now() / 1000;
+                leaves.forEach((leaf, i) => {
+                    const leafThreshold = 0.15 + (i / leaves.length) * 0.55;
+                    const leafGrowth = Math.max(0, (g - leafThreshold) / (1 - leafThreshold));
+                    const scale = Math.pow(leafGrowth, 0.65);
+                    leaf.scaling = new BABYLON.Vector3(scale, scale, scale);
+                    
+                    const windStrength = 0.08 * g;
+                    const sway = Math.sin(time * 1.2 + leaf.phase) * windStrength;
+                    const bob = Math.cos(time * 0.6 + leaf.phase * 0.5) * windStrength * 0.4;
+                    
+                    const trunkScale = 0.25 + g * 0.75;
+                    leaf.position.x = leaf.basePos.x + sway;
+                    leaf.position.y = (leaf.basePos.y * trunkScale * 0.75 + 1.2) + bob;
+                    leaf.position.z = leaf.basePos.z + Math.cos(time * 0.9 + leaf.phase) * windStrength * 0.6;
+                    
+                    leaf.rotation.z = Math.sin(time * 0.8 + leaf.phase) * 0.1 * g;
+                });
+
+                tree.rotation.z = Math.sin(time * 0.25) * 0.008 * g;
+            }
+
+            function initFallback() {
+                const ctx = canvas.getContext('2d');
+                
+                function drawFallback() {
+                    const w = canvas.width = window.innerWidth * window.devicePixelRatio;
+                    const h = canvas.height = window.innerHeight * window.devicePixelRatio;
+                    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+                    
+                    const gradient = ctx.createLinearGradient(0, 0, 0, h);
+                    gradient.addColorStop(0, '#1a2f1a');
+                    gradient.addColorStop(1, '#0d1f0d');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, w, h);
+                    
+                    const centerX = window.innerWidth / 2;
+                    const baseY = window.innerHeight * 0.65;
+                    const g = currentGrowth;
+                    
+                    ctx.fillStyle = '#2d1f14';
+                    const trunkHeight = 60 + g * 140;
+                    const trunkWidth = 15 + g * 15;
+                    ctx.beginPath();
+                    ctx.moveTo(centerX - trunkWidth / 2, baseY);
+                    ctx.lineTo(centerX - trunkWidth / 3, baseY - trunkHeight);
+                    ctx.lineTo(centerX + trunkWidth / 3, baseY - trunkHeight);
+                    ctx.lineTo(centerX + trunkWidth / 2, baseY);
+                    ctx.fill();
+                    
+                    const leafLayers = Math.floor(3 + g * 4);
+                    for (let layer = 0; layer < leafLayers; layer++) {
+                        const layerY = baseY - trunkHeight - layer * 25 * g;
+                        const layerSize = (80 + g * 60) * (1 - layer * 0.15);
+                        const green = 80 + layer * 20 + Math.random() * 20;
+                        
+                        ctx.fillStyle = `rgb(${40 + layer * 10}, ${green}, ${30 + layer * 5})`;
+                        ctx.beginPath();
+                        ctx.ellipse(centerX, layerY, layerSize, layerSize * 0.7, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    
+                    currentGrowth += (targetGrowth - currentGrowth) * 0.02;
+                    requestAnimationFrame(drawFallback);
+                }
+                
+                drawFallback();
+                
+                setTimeout(() => {
+                    loadingScreen.classList.add('fade-out');
+                    updateCountdown();
+                    setInterval(updateCountdown, 1000);
+                }, 500);
+            }
+
+            loadBabylon();
+        })();
+    </script>
+</body>
+</html>
