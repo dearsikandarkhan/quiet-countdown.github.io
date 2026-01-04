@@ -3,25 +3,25 @@
    Main application logic
    ============================================ */
 
-(function() {
+(function () {
     'use strict';
 
     // ============================================
     // CONFIGURATION
     // ============================================
-    
+
     const TOTAL_DAYS = 44;
-    const startDate = new Date();
-    startDate.setHours(0, 0, 0, 0);
-    
-    const targetDate = new Date(startDate);
-    targetDate.setDate(targetDate.getDate() + TOTAL_DAYS);
-    targetDate.setHours(18, 0, 0, 0);
+
+    // Fixed target date: February 13, 2026 at 18:00
+    const targetDate = new Date(2026, 1, 13, 18, 0, 0, 0); // Month is 0-indexed, so 1 = February
+
+    // Start date: January 1, 2026 (for progress calculation)
+    const startDate = new Date(2026, 0, 1, 0, 0, 0, 0);
 
     // ============================================
     // SCENE VARIATIONS - Random on each refresh
     // ============================================
-    
+
     const sceneVariations = [
         {
             name: 'Mountain Dawn',
@@ -56,13 +56,13 @@
             sunColor: { r: 0.7, g: 0.75, b: 1 }
         }
     ];
-    
+
     let currentSceneIndex = Math.floor(Math.random() * sceneVariations.length);
 
     // ============================================
     // EXPANDED QUOTES - More variety
     // ============================================
-    
+
     const quotes = [
         "The only way to make sense out of change is to plunge into it, move with it, and join the dance.",
         "Growth is painful. Change is painful. But nothing is as painful as staying stuck somewhere you don't belong.",
@@ -104,7 +104,7 @@
     // ============================================
     // MUSIC VARIATIONS - Different ambient sounds
     // ============================================
-    
+
     const musicVariants = [
         { name: "Peaceful Piano", baseFreq: 65.41, chordType: "major", tempo: 0.06, style: "piano" },
         { name: "Ocean Waves", baseFreq: 55.00, chordType: "sus4", tempo: 0.04, style: "ocean" },
@@ -119,7 +119,7 @@
     // ============================================
     // MOTIVATIONAL MESSAGES
     // ============================================
-    
+
     const motivationalMessages = [
         { icon: "🌱", text: "Every day is progress" },
         { icon: "✨", text: "You're doing great" },
@@ -134,7 +134,7 @@
     // ============================================
     // DOM ELEMENTS
     // ============================================
-    
+
     const daysEl = document.getElementById('days');
     const hoursEl = document.getElementById('hours');
     const minutesEl = document.getElementById('minutes');
@@ -154,16 +154,16 @@
     // ============================================
     // INITIAL SETUP
     // ============================================
-    
+
     // Set random quote
     quoteText.textContent = `"${quotes[Math.floor(Math.random() * quotes.length)]}"`;
-    
+
     // Set random motivation
     const motivation = motivationalMessages[Math.floor(Math.random() * motivationalMessages.length)];
     if (motivationBadge) {
         motivationBadge.innerHTML = `<span class="motivation-badge-icon">${motivation.icon}</span>${motivation.text}`;
     }
-    
+
     // Set scene indicator
     const currentScene = sceneVariations[currentSceneIndex];
     if (sceneIndicator) {
@@ -173,7 +173,7 @@
     // ============================================
     // AUDIO SYSTEM
     // ============================================
-    
+
     let audioContext = null;
     let isPlaying = false;
     let masterGain = null;
@@ -192,13 +192,13 @@
 
     function initAudio() {
         if (audioContext) return;
-        
+
         try {
             audioContext = new (window.AudioContext || window.webkitAudioContext)();
             masterGain = audioContext.createGain();
             masterGain.gain.value = 0;
             masterGain.connect(audioContext.destination);
-            
+
             createMusicVariant(currentMusicIndex);
             createNatureSounds();
         } catch (e) {
@@ -213,7 +213,7 @@
 
         // Clean up previous oscillators
         activeOscillators.forEach(osc => {
-            try { osc.stop(); } catch(e) {}
+            try { osc.stop(); } catch (e) { }
         });
         activeOscillators = [];
         activeGains = [];
@@ -222,20 +222,20 @@
             const osc = audioContext.createOscillator();
             const gain = audioContext.createGain();
             const filter = audioContext.createBiquadFilter();
-            
+
             osc.type = 'sine';
             osc.frequency.value = freq;
-            
+
             filter.type = 'lowpass';
             filter.frequency.value = 250 + i * 40;
             filter.Q.value = 0.3;
-            
+
             gain.gain.value = volumes[i];
-            
+
             osc.connect(filter);
             filter.connect(gain);
             gain.connect(masterGain);
-            
+
             osc.start();
             activeOscillators.push(osc);
             activeGains.push({ gain, baseVol: volumes[i], phase: i * 1.5 });
@@ -247,11 +247,11 @@
         lfo.frequency.value = variant.tempo;
         lfoGain.gain.value = 0.2;
         lfo.connect(lfoGain);
-        
+
         activeGains.forEach(({ gain }) => {
             lfoGain.connect(gain.gain);
         });
-        
+
         lfo.start();
         activeOscillators.push(lfo);
 
@@ -262,27 +262,27 @@
         const bufferSize = 2 * audioContext.sampleRate;
         const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
         const output = noiseBuffer.getChannelData(0);
-        
+
         for (let i = 0; i < bufferSize; i++) {
             output[i] = Math.random() * 2 - 1;
         }
-        
+
         const whiteNoise = audioContext.createBufferSource();
         whiteNoise.buffer = noiseBuffer;
         whiteNoise.loop = true;
-        
+
         const windFilter = audioContext.createBiquadFilter();
         windFilter.type = 'bandpass';
         windFilter.frequency.value = 250;
         windFilter.Q.value = 0.4;
-        
+
         const windGain = audioContext.createGain();
         windGain.gain.value = 0.012;
-        
+
         whiteNoise.connect(windFilter);
         windFilter.connect(windGain);
         windGain.connect(masterGain);
-        
+
         whiteNoise.start();
 
         // Modulate wind
@@ -309,21 +309,21 @@
         const birdOsc = audioContext.createOscillator();
         const birdGain = audioContext.createGain();
         const birdFilter = audioContext.createBiquadFilter();
-        
+
         birdOsc.type = 'sine';
         const baseFreq = 1000 + Math.random() * 600;
         birdOsc.frequency.value = baseFreq;
-        
+
         birdFilter.type = 'bandpass';
         birdFilter.frequency.value = baseFreq;
         birdFilter.Q.value = 4;
-        
+
         birdGain.gain.value = 0;
-        
+
         birdOsc.connect(birdFilter);
         birdFilter.connect(birdGain);
         birdGain.connect(masterGain);
-        
+
         const now = audioContext.currentTime;
         birdGain.gain.setValueAtTime(0, now);
         birdGain.gain.linearRampToValueAtTime(0.015, now + 0.05);
@@ -331,7 +331,7 @@
         birdGain.gain.linearRampToValueAtTime(0.01, now + 0.2);
         birdOsc.frequency.linearRampToValueAtTime(baseFreq * 0.9, now + 0.35);
         birdGain.gain.linearRampToValueAtTime(0, now + 0.5);
-        
+
         birdOsc.start(now);
         birdOsc.stop(now + 0.6);
     }
@@ -340,21 +340,21 @@
         if (!audioContext) return;
         currentMusicIndex = (currentMusicIndex + 1) % musicVariants.length;
         createMusicVariant(currentMusicIndex);
-        
+
         musicIndicator.classList.add('visible');
         setTimeout(() => musicIndicator.classList.remove('visible'), 2500);
     }
 
     function toggleSound() {
         if (!audioContext) initAudio();
-        
+
         isPlaying = !isPlaying;
         soundToggle.textContent = isPlaying ? '🔊' : '🔇';
-        
+
         if (audioContext && audioContext.state === 'suspended') {
             audioContext.resume();
         }
-        
+
         if (masterGain) {
             masterGain.gain.setTargetAtTime(isPlaying ? 1 : 0, audioContext.currentTime, 0.5);
         }
@@ -367,7 +367,7 @@
 
     soundToggle.addEventListener('click', toggleSound);
     soundToggle.addEventListener('dblclick', switchMusic);
-    
+
     if (sceneIndicator) {
         sceneIndicator.addEventListener('click', () => {
             currentSceneIndex = (currentSceneIndex + 1) % sceneVariations.length;
@@ -380,7 +380,7 @@
     // ============================================
     // PROGRESS & COUNTDOWN
     // ============================================
-    
+
     let currentGrowth = 0;
     let targetGrowth = 0;
     let currentDay = 1;
@@ -393,29 +393,29 @@
         const now = new Date();
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
-        
+
         const msPerDay = 24 * 60 * 60 * 1000;
         const daysPassed = Math.floor((now - startDate) / msPerDay);
-        
+
         currentDay = Math.min(Math.max(1, daysPassed + 1), TOTAL_DAYS);
-        
+
         const dayProgress = (now - todayStart) / msPerDay;
         const overallProgress = (currentDay - 1 + dayProgress) / TOTAL_DAYS;
-        
+
         return Math.max(0, Math.min(1, overallProgress));
     }
 
     function updateProgressRing(progress) {
         if (!progressRing) return;
-        
+
         const circumference = 2 * Math.PI * 70; // r=70
         const offset = circumference * (1 - progress);
         progressRing.style.strokeDashoffset = offset;
-        
+
         if (progressPercent) {
             progressPercent.textContent = `${Math.round(progress * 100)}%`;
         }
-        
+
         if (dayIndicator) {
             dayIndicator.textContent = `Day ${currentDay} of ${TOTAL_DAYS}`;
         }
@@ -424,10 +424,10 @@
     function updateCountdown() {
         const now = new Date();
         const remaining = targetDate - now;
-        
+
         const progress = calculateDayAndProgress();
         targetGrowth = progress;
-        
+
         updateProgressRing(progress);
 
         if (remaining <= 0) {
@@ -455,7 +455,7 @@
     // ============================================
     // 3D SCENE (Babylon.js)
     // ============================================
-    
+
     const canvas = document.getElementById('renderCanvas');
     const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
@@ -464,7 +464,7 @@
 
     function applySceneColors(sceneConfig) {
         if (!scene) return;
-        
+
         scene.clearColor = new BABYLON.Color4(
             sceneConfig.clearColor.r,
             sceneConfig.clearColor.g,
@@ -486,10 +486,10 @@
     function loadBabylon() {
         const script = document.createElement('script');
         script.src = 'https://cdn.babylonjs.com/babylon.js';
-        script.onload = function() {
+        script.onload = function () {
             initScene();
         };
-        script.onerror = function() {
+        script.onerror = function () {
             console.log('Babylon.js failed to load, using fallback');
             initFallback();
         };
@@ -498,18 +498,18 @@
 
     function initScene() {
         try {
-            engine = new BABYLON.Engine(canvas, true, { 
-                preserveDrawingBuffer: true, 
+            engine = new BABYLON.Engine(canvas, true, {
+                preserveDrawingBuffer: true,
                 stencil: true,
                 antialias: true
             });
 
             scene = new BABYLON.Scene(engine);
-            
+
             // Apply current scene variation
             const sceneConfig = sceneVariations[currentSceneIndex];
             applySceneColors(sceneConfig);
-            
+
             scene.fogMode = BABYLON.Scene.FOGMODE_EXP2;
             scene.fogDensity = 0.012;
 
@@ -565,7 +565,7 @@
             let lastTime = performance.now();
             let cameraAngle = Math.PI / 2;
 
-            engine.runRenderLoop(function() {
+            engine.runRenderLoop(function () {
                 const currentTime = performance.now();
                 const deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
                 lastTime = currentTime;
@@ -575,16 +575,16 @@
                 camera.beta = Math.PI / 2.6 + Math.sin(cameraAngle * 0.5) * 0.02;
 
                 animateTree(deltaTime, currentTime / 1000);
-                
+
                 // Dynamic camera distance
                 const baseRadius = isMobile ? 16 : 12;
                 const targetRadius = baseRadius - currentGrowth * 3;
                 camera.radius += (targetRadius - camera.radius) * 0.01;
-                
+
                 scene.render();
             });
 
-            window.addEventListener('resize', function() {
+            window.addEventListener('resize', function () {
                 engine.resize();
             });
 
@@ -620,16 +620,16 @@
             const angle = Math.random() * Math.PI * 2;
             const x = Math.cos(angle) * dist;
             const z = Math.sin(angle) * dist;
-            
+
             const blade = BABYLON.MeshBuilder.CreatePlane(`grass${i}`, {
                 width: 0.04 + Math.random() * 0.04,
                 height: 0.08 + Math.random() * 0.2
             }, scene);
-            
+
             blade.position = new BABYLON.Vector3(x, 0.06, z);
             blade.rotation.y = Math.random() * Math.PI * 2;
             blade.rotation.x = -0.1;
-            
+
             const grassMat = new BABYLON.StandardMaterial(`grassMat${i}`, scene);
             grassMat.diffuseColor = new BABYLON.Color3(
                 0.08 + Math.random() * 0.08,
@@ -645,7 +645,7 @@
     // ============================================
     // TREE GENERATOR CLASS
     // ============================================
-    
+
     class TreeGenerator {
         constructor(sceneRef, shadowGen, mobile) {
             this.scene = sceneRef;
@@ -759,7 +759,7 @@
         buildLeaves() {
             const leavesPerBranch = this.isMobile ? 6 : 10;
             const leafMats = [];
-            
+
             for (let m = 0; m < 5; m++) {
                 const mat = new BABYLON.StandardMaterial(`leafMat_${m}`, this.scene);
                 const greenBase = 0.30 + m * 0.08;
